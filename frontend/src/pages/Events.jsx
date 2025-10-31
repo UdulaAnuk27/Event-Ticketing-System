@@ -3,6 +3,8 @@ import { Card, Button, Row, Col } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import eventImage from "../assets/ticket.png";
 import eventImage2 from "../assets/ticket2.png";
+import eventImage3 from "../assets/ticket3.png";
+import eventImage4 from "../assets/ticket4.png";
 
 
 const Events = () => {
@@ -31,7 +33,7 @@ const Events = () => {
       date: "2025-10-25",
       venue: "BMICH, Colombo",
       price: 1500,
-      image: eventImage,
+      image: eventImage3,
     },
     {
       id: 4,
@@ -39,7 +41,7 @@ const Events = () => {
       date: "2025-11-15",
       venue: "Colombo Art Gallery",
       price: 2000,
-      image: eventImage,
+      image: eventImage4,
     },
   ];
 
@@ -49,7 +51,7 @@ const Events = () => {
   };
 
   return (
-    <div style={{ padding: "20px", minHeight: "79vh", background: "#86c6e4ff" }}>
+    <div style={{ padding: "20px", minHeight: "79vh", background: "#9ecbe0ff" }}>
       <h2 className="mb-4 text-center">🎉 Upcoming Events</h2>
       <Row className="g-4 justify-content-center">
         {events.map((event) => (
@@ -58,7 +60,7 @@ const Events = () => {
               <Card.Img
                 variant="top"
                 src={event.image}
-                style={{ height: "200px", objectFit: "cover" }}
+                style={{ height: "220px", objectFit: "cover" }}
               />
               <Card.Body className="text-center d-flex flex-column justify-content-between" style={{ height: "220px" }}>
                 <div>

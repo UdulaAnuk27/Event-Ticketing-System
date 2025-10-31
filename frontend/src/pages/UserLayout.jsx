@@ -77,9 +77,9 @@ const UserLayout = () => {
   const navItems = [
     { name: "Dashboard", path: "/user/dashboard", icon: <FaTachometerAlt /> },
     { name: "Events", path: "/user/events", icon: <FaRegCalendarAlt  /> },
-    { name: "My Tickets", path: "/user/mytickets", icon: <FaTicketAlt /> },
-    { name: "Payment", path: "/user/payment", icon: <FaCreditCard /> },
-    { name: "My QR", path: "/user/myqrcodes", icon: <FaQrcode /> },
+    { name: "My Tickets", path: "/user/my-tickets", icon: <FaTicketAlt /> },
+    { name: "Payments", path: "/user/payments", icon: <FaCreditCard /> },
+    { name: "My QR Codes", path: "/user/my-qr-codes", icon: <FaQrcode /> },
   ];
 
   return (

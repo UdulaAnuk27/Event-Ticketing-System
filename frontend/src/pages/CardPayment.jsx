@@ -7,6 +7,7 @@ import axios from "axios";
 const Payment = () => {
   const { state } = useLocation(); // event + user info
   const navigate = useNavigate();
+
   const [cardType, setCardType] = useState("Visa");
   const [cardDetails, setCardDetails] = useState({
     cardNumber: "",
@@ -15,26 +16,19 @@ const Payment = () => {
     cvv: "",
   });
 
-  // Handle controlled input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === "cardNumber") {
-      // Remove all non-digits
       let num = value.replace(/\D/g, "").slice(0, 16);
-      // Add space every 4 digits
       num = num.replace(/(\d{4})(?=\d)/g, "$1 ");
       setCardDetails({ ...cardDetails, cardNumber: num });
     } else if (name === "cvv") {
-      // Only digits, max 3
       const cvv = value.replace(/\D/g, "").slice(0, 3);
       setCardDetails({ ...cardDetails, cvv });
     } else if (name === "expiry") {
-      // Only digits, auto insert /
       let exp = value.replace(/\D/g, "").slice(0, 4);
-      if (exp.length > 2) {
-        exp = exp.slice(0, 2) + "/" + exp.slice(2);
-      }
+      if (exp.length > 2) exp = exp.slice(0, 2) + "/" + exp.slice(2);
       setCardDetails({ ...cardDetails, expiry: exp });
     } else {
       setCardDetails({ ...cardDetails, [name]: value });
@@ -44,7 +38,6 @@ const Payment = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
 
-    // Basic validation for card details
     if (
       !cardDetails.cardNumber ||
       !cardDetails.cardName ||
@@ -57,14 +50,12 @@ const Payment = () => {
 
     try {
       const token = localStorage.getItem("token");
-
       if (!token) {
         alert("⚠️ Please log in to continue payment!");
         navigate("/user/login");
         return;
       }
 
-      // Prepare payment data
       const paymentData = {
         event_title: state.title,
         event_date: state.date,
@@ -72,27 +63,20 @@ const Payment = () => {
         tickets_count: state.tickets,
         total_price: state.total,
         card_type: cardType,
-        card_last4: cardDetails.cardNumber.slice(-4), // Store only last 4 digits (safe)
+        card_last4: cardDetails.cardNumber.slice(-4),
       };
 
-      // Send payment + booking request
       const res = await axios.post(
         "http://localhost:5000/api/tickets/book",
         paymentData,
         {
-          headers: {
-            Authorization: `Bearer ${token}`, // 🔐 Send JWT token
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           withCredentials: true,
         }
       );
 
-      // If booking was successful
-      if (res.data.success) {
+      if (res.status === 201 && res.data.ticket) {
         alert("✅ Payment Successful!");
-
-        // Navigate to ticket success page
         navigate("/user/ticket-success", {
           state: { ticket: res.data.ticket, user: res.data.user },
         });
@@ -148,17 +132,11 @@ const Payment = () => {
           <p className="mb-1">📍 {state.venue}</p>
           <p className="mb-1">🎟️ Tickets: {state.tickets}</p>
           <h6 className="text-success fw-bold mb-2">💰 Rs.{state.total}</h6>
-
           <hr />
-
           <h6 className="fw-bold mb-1">👤 User Details</h6>
           <p className="mb-1">Name: {state.user?.name || "John Doe"}</p>
-          <p className="mb-1">
-            Mobile: {state.user?.mobile || "+94 712345678"}
-          </p>
-          <p className="mb-0">
-            Email: {state.user?.email || "example@email.com"}
-          </p>
+          <p className="mb-1">Mobile: {state.user?.mobile || "+94 712345678"}</p>
+          <p className="mb-0">Email: {state.user?.email || "example@email.com"}</p>
         </div>
 
         {/* RIGHT: Payment Form */}

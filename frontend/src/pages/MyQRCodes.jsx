@@ -31,7 +31,7 @@ const MyQRCodes = () => {
         setTickets(res.data);
       } catch (err) {
         console.error("Error fetching user tickets:", err);
-        alert("Failed to fetch tickets. Please log in again.");
+        // alert("Failed to fetch tickets. Please log in again.");
       } finally {
         setLoading(false);
       }
@@ -58,7 +58,7 @@ const MyQRCodes = () => {
   };
 
   return (
-    <div style={{ padding: "20px", minHeight: "81vh", background: "#d2e6f7" }}>
+    <div style={{ padding: "20px", minHeight: "81vh", background: "#9ecbe0ff" }}>
       <h3 className="mb-4 text-primary">🧾 My QR Codes</h3>
 
       {loading ? (
@@ -174,7 +174,7 @@ const MyQRCodes = () => {
               </p>
               <p>
                 <strong>Status:</strong>{" "}
-                {selectedTicket.status || "Pending"}
+                {selectedTicket.status || "Active"}
               </p>
               <Button variant="success" onClick={() => downloadQR(selectedTicket)}>
                 Download QR

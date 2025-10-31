@@ -20,7 +20,7 @@ const MyTickets = () => {
         setTickets(response.data);
       } catch (error) {
         console.error("Error fetching user tickets:", error);
-        alert("Failed to fetch tickets");
+        // alert("Failed to fetch tickets");
       } finally {
         setLoading(false);
       }
@@ -47,7 +47,7 @@ const MyTickets = () => {
   };
 
   return (
-    <div style={{ padding: "20px", minHeight: "81vh", background: "#86c6e4ff" }}>
+    <div style={{ padding: "20px", minHeight: "81vh", background: "#9ecbe0ff" }}>
       <h3 className="mb-4 text-primary">🎟️ My Tickets</h3>
 
       {loading ? (

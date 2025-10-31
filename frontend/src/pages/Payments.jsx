@@ -16,12 +16,12 @@ const Payments = () => {
         const token = localStorage.getItem("token");
 
         if (!token) {
-          alert("Please log in to view payments.");
+          // alert("Please log in to view payments.");
           setLoading(false);
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/payments/my", {
+        const res = await axios.get("http://localhost:5000/api/tickets/my-tickets", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -50,7 +50,7 @@ const Payments = () => {
   };
 
   return (
-    <div style={{ padding: "20px", minHeight: "81vh", background: "#e0f2ff" }}>
+    <div style={{ padding: "20px", minHeight: "81vh", background: "#9ecbe0ff" }}>
       <h3 className="mb-4 text-primary">💳 My Payments</h3>
 
       {loading ? (
@@ -89,7 +89,7 @@ const Payments = () => {
                   payments.map((payment) => (
                     <tr key={payment.id} className="align-middle">
                       <td>{payment.id}</td>
-                      <td>{payment.ticket_id}</td>
+                      <td>{payment.id}</td>
                       <td>Rs. {payment.amount}</td>
                       <td>{payment.method || "Card"}</td>
                       <td>
@@ -100,7 +100,7 @@ const Payments = () => {
                               : "bg-warning text-dark"
                           }`}
                         >
-                          {payment.status}
+                          {payment.status || "Paid"}
                         </span>
                       </td>
                       <td>
@@ -136,7 +136,7 @@ const Payments = () => {
                 <strong>Payment ID:</strong> {selectedPayment.id}
               </p>
               <p>
-                <strong>Ticket ID:</strong> {selectedPayment.ticket_id}
+                <strong>Ticket ID:</strong> {selectedPayment.id}
               </p>
               <p>
                 <strong>Amount:</strong> Rs. {selectedPayment.amount}
@@ -145,7 +145,7 @@ const Payments = () => {
                 <strong>Method:</strong> {selectedPayment.method || "Card"}
               </p>
               <p>
-                <strong>Status:</strong> {selectedPayment.status}
+                <strong>Status:</strong> {selectedPayment.status || "Paid"}
               </p>
               <p>
                 <strong>Date:</strong>{" "}

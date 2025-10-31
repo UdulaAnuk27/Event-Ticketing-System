@@ -32,9 +32,9 @@ function App() {
         <Route path="events" element={<Events />} />
         <Route path="card-payment" element={<CardPayment />} />
         <Route path="ticket-success" element={<TicketSuccess />} />
-        <Route path="mytickets" element={<MyTickets />} />
-        <Route path="payment" element={<Payments />} />
-        <Route path="myqrcodes" element={<MyQRCodes />} />
+        <Route path="my-tickets" element={<MyTickets />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="my-qr-codes" element={<MyQRCodes />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
