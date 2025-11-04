@@ -1,6 +1,8 @@
+// controllers/userController.js
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const sendSMS = require("../utils/sendSMS");
 
 // ===============================
 // Register User
@@ -25,6 +27,15 @@ exports.registerUser = async (req, res) => {
       password: hashedPassword,
     });
 
+    // ✅ Send Registration SMS
+    try {
+      const msg = `Hi ${first_name} ${last_name}, welcome to Event Ticketing System! Your account has been created successfully.`;
+      await sendSMS(mobile, msg);
+      console.log("✅ Registration SMS sent to", mobile);
+    } catch (smsErr) {
+      console.warn("⚠️ Failed to send registration SMS:", smsErr.message);
+    }
+
     return res.status(201).json({
       message: "User registered successfully",
       user: {
@@ -48,27 +59,33 @@ exports.loginUser = async (req, res) => {
   const { mobile, password } = req.body;
 
   try {
-    // Find user by mobile
     const user = await User.findOne({ where: { mobile } });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Compare password
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Generate JWT token
     const token = jwt.sign(
       { id: user.id, role: "user" },
-      process.env.JWT_SECRET || "secretkey",
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    // Send cookie
+    // ✅ Send Login SMS
+    try {
+      const msg = `Hello ${user.first_name} ${user.last_name}, you have successfully logged into Event Ticketing System!`;
+      await sendSMS(user.mobile, msg);
+      console.log("✅ Login SMS sent to", user.mobile);
+    } catch (smsErr) {
+      console.warn("⚠️ Failed to send login SMS:", smsErr.message);
+    }
+
+    // Send token cookie
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "strict",
-      secure: process.env.NODE_ENV === "production", // true if HTTPS
-      maxAge: 60 * 60 * 1000, // 1 hour
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 1000,
     });
 
     return res.status(200).json({
@@ -118,9 +135,7 @@ exports.getUserDashboard = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    return res.status(200).json({
-      user,
-    });
+    return res.status(200).json({ user });
   } catch (err) {
     console.error("Dashboard error:", err);
     res.status(500).json({ message: "Internal server error" });
