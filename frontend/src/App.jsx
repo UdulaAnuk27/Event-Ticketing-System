@@ -13,8 +13,10 @@ import Payments from "./pages/Payments";
 import TicketSuccess from "./pages/TicketSuccess";
 import MyTickets from "./pages/MyTickets";
 import MyQRCodes from "./pages/MyQRCodes";
-import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
+
+import AdminLayout from "./pages/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -38,7 +40,11 @@ function App() {
         <Route path="profile" element={<Profile />} />
       </Route>
 
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      {/*Admin routes with layout */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route path="dashboard" element={<AdminDashboard />} />
+      </Route>
+
     </Routes>
   );
 }
