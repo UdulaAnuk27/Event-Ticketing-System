@@ -5,6 +5,7 @@ const {
   loginUser,
   logoutUser,
   getUserDashboard,
+  changePassword,
 } = require("../controllers/userController");
 const { verifyUser } = require("../middlewares/authMiddleware");
 
@@ -15,5 +16,8 @@ router.post("/logout", verifyUser, logoutUser);
 
 // 🔹 Protected Route (User Dashboard)
 router.get("/dashboard", verifyUser, getUserDashboard);
+
+// 🔹 Change Password (Protected)
+router.put("/change-password", verifyUser, changePassword);
 
 module.exports = router;

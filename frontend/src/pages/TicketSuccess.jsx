@@ -10,10 +10,14 @@ const TicketSuccess = () => {
     return (
       <div
         className="d-flex flex-column justify-content-center align-items-center"
-        style={{ minHeight: "80vh", background: "#f8f9fa" }}
+        style={{ minHeight: "60vh", backgroundColor: "#f8f9fa" }}
       >
         <h4 className="text-danger mb-3">⚠️ Ticket details not found!</h4>
-        <Button variant="primary" onClick={() => navigate("/user/events")}>
+        <Button
+          variant="primary"
+          onClick={() => navigate("/user/events")}
+          style={{ borderRadius: "8px" }}
+        >
           🔙 Back to Events
         </Button>
       </div>
@@ -22,18 +26,21 @@ const TicketSuccess = () => {
 
   const { ticket, user } = state;
 
+  // Download QR code
   const downloadQR = () => {
     if (!ticket.qr_code) return;
     const link = document.createElement("a");
     link.href = ticket.qr_code;
-    link.download = `ticket_${ticket.id}.png`;
+    link.download = `ticket_${ticket.booking_id || ticket.id}.png`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <div
       style={{
-        minHeight: "80vh",
+        minHeight: "81vh",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -43,7 +50,7 @@ const TicketSuccess = () => {
     >
       <Card
         style={{
-          width: "850px",
+          width: "880px",
           borderRadius: "20px",
           boxShadow: "0 8px 25px rgba(0,0,0,0.25)",
           display: "flex",
@@ -52,11 +59,12 @@ const TicketSuccess = () => {
           flexWrap: "wrap",
         }}
       >
+        {/* LEFT SECTION: Event + User Info */}
         <div
           style={{
             flex: 1,
-            background: "#f8f9fa",
-            padding: "25px",
+            backgroundColor: "#f8f9fa",
+            padding: "30px", // reduced padding
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
@@ -64,19 +72,37 @@ const TicketSuccess = () => {
             minWidth: "300px",
           }}
         >
-          <h3 className="text-success mb-3 text-center">🎉 Booking Successful!</h3>
-          <h5 className="fw-bold mb-1">{ticket.event_title}</h5>
-          <p className="mb-1">📅 {ticket.event_date}</p>
-          <p className="mb-1">📍 {ticket.venue}</p>
-          <p className="mb-1">🎟️ Tickets: {ticket.tickets_count}</p>
-          <h6 className="text-success fw-bold mb-3">💰 Rs.{ticket.total_price}</h6>
+          <h3 className="text-success mb-3 text-center fw-bold">
+            🎉 Booking Successful!
+          </h3>
+
+          <div className="mb-3">
+            <h5 className="fw-bold mb-1">
+              {ticket.event?.title || ticket.event_title || "Unnamed Event"}
+            </h5>
+            <p className="mb-1">
+              📅 {ticket.event?.date || ticket.event_date || "Date not specified"}
+            </p>
+            <p className="mb-1">
+              📍 {ticket.event?.venue || ticket.venue || "Venue not specified"}
+            </p>
+            <p className="mb-1">🎟️ Tickets: {ticket.tickets_count}</p>
+            <h6 className="text-success fw-bold mb-3">
+              💰 Rs. {ticket.total_price}
+            </h6>
+          </div>
+
           <hr />
-          <h6 className="fw-bold mb-1">👤 User Details</h6>
-          <p className="mb-1">Name: {user?.name || "N/A"}</p>
+
+          <h6 className="fw-bold mb-2">👤 User Details</h6>
+          <p className="mb-1">
+            Name: {user?.first_name || user?.name || "N/A"}
+          </p>
           <p className="mb-1">Mobile: {user?.mobile || "N/A"}</p>
-          <p className="mb-0">Email: {user?.email || "N/A"}</p>
+          <p className="mb-0">Email: {user?.email || user?.details?.email || "N/A"}</p>
         </div>
 
+        {/* RIGHT SECTION: QR Code + Actions */}
         <div
           style={{
             flex: 1,
@@ -84,8 +110,8 @@ const TicketSuccess = () => {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            padding: "25px",
-            background: "#fff",
+            padding: "20px", // reduced padding
+            backgroundColor: "#ffffff",
             minWidth: "300px",
           }}
         >
@@ -94,11 +120,11 @@ const TicketSuccess = () => {
               src={ticket.qr_code}
               alt="QR Code"
               style={{
-                width: "220px",
-                height: "220px",
+                width: "200px", // slightly smaller
+                height: "200px",
                 border: "2px dashed #28a745",
                 borderRadius: "15px",
-                padding: "10px",
+                padding: "8px",
                 marginBottom: "20px",
               }}
             />

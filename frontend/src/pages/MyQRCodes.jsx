@@ -13,25 +13,32 @@ const MyQRCodes = () => {
       try {
         setLoading(true);
 
-        // ✅ Get token from localStorage
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("You must be logged in to view your tickets.");
+          alert("You must be logged in to view your QR codes.");
           setLoading(false);
           return;
         }
 
-        // ✅ Fetch tickets with Authorization header
-        const res = await axios.get("http://localhost:5000/api/tickets/my-tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // ✅ Use new endpoint: /api/bookings/my
+        const res = await axios.get("http://localhost:5000/api/bookings/my", {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        setTickets(res.data);
+        // ✅ Ensure QR and event info are mapped properly
+        const mappedTickets = res.data.map((t) => ({
+          id: t.id,
+          status: t.status || "Active",
+          qr_code: t.qr_code,
+          event: t.event || {},
+          user: t.user || {},
+          booking_date: t.booking_date || t.created_at || null,
+        }));
+
+        setTickets(mappedTickets);
       } catch (err) {
-        console.error("Error fetching user tickets:", err);
-        // alert("Failed to fetch tickets. Please log in again.");
+        console.error("Error fetching tickets:", err);
+        // alert("Failed to fetch tickets. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -41,6 +48,7 @@ const MyQRCodes = () => {
   }, []);
 
   const downloadQR = (ticket) => {
+    if (!ticket.qr_code) return alert("No QR code available for this ticket.");
     const link = document.createElement("a");
     link.href = ticket.qr_code;
     link.download = `ticket_${ticket.id}.png`;
@@ -62,7 +70,7 @@ const MyQRCodes = () => {
       <h3 className="mb-4 text-primary">🧾 My QR Codes</h3>
 
       {loading ? (
-        <div className="text-center">
+        <div className="text-center py-5">
           <Spinner animation="border" variant="primary" />
         </div>
       ) : (
@@ -78,8 +86,8 @@ const MyQRCodes = () => {
               <thead className="bg-primary text-white">
                 <tr>
                   <th>QR Code</th>
-                  <th>Ticket ID</th>
-                  <th>User</th>
+                  <th>Event</th>
+                  <th>Date</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -87,8 +95,8 @@ const MyQRCodes = () => {
               <tbody>
                 {tickets.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-4">
-                      No QR Codes found
+                    <td colSpan={5} className="text-center py-4 text-muted">
+                      No tickets or QR codes found.
                     </td>
                   </tr>
                 ) : (
@@ -110,16 +118,17 @@ const MyQRCodes = () => {
                           "N/A"
                         )}
                       </td>
-                      <td>{ticket.id}</td>
-                      <td>{ticket.user?.name || ticket.user_name || "N/A"}</td>
+                      <td>{ticket.event?.title || "N/A"}</td>
+                      <td>{ticket.event?.date || "N/A"}</td>
                       <td>
                         <span
-                          className={`badge ${ticket.status === "Paid"
+                          className={`badge ${
+                            ticket.status === "Paid"
                               ? "bg-success"
                               : "bg-warning text-dark"
-                            }`}
+                          }`}
                         >
-                          {ticket.status || "Active"}
+                          {ticket.status}
                         </span>
                       </td>
                       <td>
@@ -150,33 +159,38 @@ const MyQRCodes = () => {
       {/* Modal for QR details */}
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
-          <Modal.Title>🎫 QR Code Details</Modal.Title>
+          <Modal.Title>🎫 Ticket Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedTicket && (
             <div className="d-flex flex-column align-items-center text-center">
-              <img
-                src={selectedTicket.qr_code}
-                alt="QR"
-                style={{
-                  width: "200px",
-                  height: "200px",
-                  marginBottom: "15px",
-                  borderRadius: "10px",
-                }}
-              />
+              {selectedTicket.qr_code ? (
+                <img
+                  src={selectedTicket.qr_code}
+                  alt="QR"
+                  style={{
+                    width: "200px",
+                    height: "200px",
+                    marginBottom: "15px",
+                    borderRadius: "10px",
+                  }}
+                />
+              ) : (
+                <p>No QR code available.</p>
+              )}
               <p>
-                <strong>Ticket ID:</strong> {selectedTicket.id}
+                <strong>Event:</strong> {selectedTicket.event?.title || "N/A"}
               </p>
               <p>
-                <strong>User:</strong>{" "}
-                {selectedTicket.user?.name || selectedTicket.user_name || "N/A"}
+                <strong>Date:</strong> {selectedTicket.event?.date || "N/A"}
               </p>
               <p>
-                <strong>Status:</strong>{" "}
-                {selectedTicket.status || "Active"}
+                <strong>Status:</strong> {selectedTicket.status}
               </p>
-              <Button variant="success" onClick={() => downloadQR(selectedTicket)}>
+              <Button
+                variant="success"
+                onClick={() => downloadQR(selectedTicket)}
+              >
                 Download QR
               </Button>
             </div>

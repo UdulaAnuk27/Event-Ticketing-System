@@ -7,27 +7,56 @@ const Payments = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    name: "N/A",
+    mobile: "N/A",
+    email: "N/A",
+  });
 
-  // ✅ Fetch user payments
+  // ✅ Fetch user info + payments together
   useEffect(() => {
-    const fetchPayments = async () => {
+    const fetchPaymentsAndUser = async () => {
       try {
-        setLoading(true);
         const token = localStorage.getItem("token");
+        if (!token) return;
 
-        if (!token) {
-          // alert("Please log in to view payments.");
-          setLoading(false);
-          return;
-        }
+        // Fetch in parallel
+        const [dashboardRes, detailsRes, bookingsRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/user/dashboard", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/user-details", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/bookings/my", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        const res = await axios.get("http://localhost:5000/api/tickets/my-tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // 🧍 Combine user info
+        const dashboardData = dashboardRes.data.user || dashboardRes.data;
+        const detailsData = detailsRes.data.user?.details || {};
+
+        setUserInfo({
+          name: `${dashboardData.first_name || ""} ${
+            dashboardData.last_name || ""
+          }`.trim(),
+          mobile: dashboardData.mobile || "N/A",
+          email: detailsData.email || "N/A",
         });
 
-        setPayments(res.data);
+        // 💳 Extract payment info from bookings
+        const mappedPayments = bookingsRes.data.map((b) => ({
+          id: b.id || b.booking_id,
+          event_title: b.event?.title || "N/A",
+          tickets_count: b.tickets_count || 0,
+          total_price: b.total_price || 0,
+          payment_status: b.payment_status || "Paid",
+          payment_method: b.payment_method || "Card",
+          created_at: b.created_at || b.booking_date || null,
+        }));
+
+        setPayments(mappedPayments);
       } catch (err) {
         console.error("Error fetching payments:", err);
         alert("Failed to fetch payments.");
@@ -36,9 +65,10 @@ const Payments = () => {
       }
     };
 
-    fetchPayments();
+    fetchPaymentsAndUser();
   }, []);
 
+  // 🔍 View Payment Details
   const handleView = (payment) => {
     setSelectedPayment(payment);
     setShowModal(true);
@@ -69,8 +99,9 @@ const Payments = () => {
             >
               <thead className="bg-primary text-white">
                 <tr>
-                  <th>Payment ID</th>
-                  <th>Ticket ID</th>
+                  <th>Booking ID</th>
+                  <th>Event</th>
+                  <th>Tickets</th>
                   <th>Amount (Rs.)</th>
                   <th>Method</th>
                   <th>Status</th>
@@ -81,30 +112,34 @@ const Payments = () => {
               <tbody>
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-4">
+                    <td colSpan={8} className="text-center py-4">
                       No payments found
                     </td>
                   </tr>
                 ) : (
                   payments.map((payment) => (
-                    <tr key={payment.id} className="align-middle">
+                    <tr key={payment.id}>
                       <td>{payment.id}</td>
-                      <td>{payment.id}</td>
-                      <td>Rs. {payment.amount}</td>
-                      <td>{payment.method || "Card"}</td>
+                      <td>{payment.event_title}</td>
+                      <td>{payment.tickets_count}</td>
+                      <td>Rs. {payment.total_price}</td>
+                      <td>{payment.payment_method}</td>
                       <td>
                         <span
                           className={`badge ${
-                            payment.status === "Success"
+                            payment.payment_status === "Paid" ||
+                            payment.payment_status === "Success"
                               ? "bg-success"
                               : "bg-warning text-dark"
                           }`}
                         >
-                          {payment.status || "Paid"}
+                          {payment.payment_status}
                         </span>
                       </td>
                       <td>
-                        {new Date(payment.created_at).toLocaleString("en-GB")}
+                        {payment.created_at
+                          ? new Date(payment.created_at).toLocaleString("en-GB")
+                          : "N/A"}
                       </td>
                       <td>
                         <Button
@@ -124,7 +159,7 @@ const Payments = () => {
         </Card>
       )}
 
-      {/* Modal for Payment Details */}
+      {/* 🧾 Payment Details Modal */}
       <Modal show={showModal} onHide={handleClose} centered>
         <Modal.Header closeButton>
           <Modal.Title>🧾 Payment Details</Modal.Title>
@@ -133,23 +168,39 @@ const Payments = () => {
           {selectedPayment && (
             <div style={{ lineHeight: "1.8" }}>
               <p>
-                <strong>Payment ID:</strong> {selectedPayment.id}
+                <strong>Booking ID:</strong> {selectedPayment.id}
               </p>
               <p>
-                <strong>Ticket ID:</strong> {selectedPayment.id}
+                <strong>Event:</strong> {selectedPayment.event_title}
               </p>
               <p>
-                <strong>Amount:</strong> Rs. {selectedPayment.amount}
+                <strong>Tickets:</strong> {selectedPayment.tickets_count}
               </p>
               <p>
-                <strong>Method:</strong> {selectedPayment.method || "Card"}
+                <strong>Amount:</strong> Rs. {selectedPayment.total_price}
               </p>
               <p>
-                <strong>Status:</strong> {selectedPayment.status || "Paid"}
+                <strong>Method:</strong> {selectedPayment.payment_method}
+              </p>
+              <p>
+                <strong>Status:</strong> {selectedPayment.payment_status}
               </p>
               <p>
                 <strong>Date:</strong>{" "}
-                {new Date(selectedPayment.created_at).toLocaleString("en-GB")}
+                {selectedPayment.created_at
+                  ? new Date(selectedPayment.created_at).toLocaleString("en-GB")
+                  : "N/A"}
+              </p>
+
+              <hr />
+              <p>
+                <strong>Name:</strong> {userInfo.name}
+              </p>
+              <p>
+                <strong>Mobile:</strong> {userInfo.mobile}
+              </p>
+              <p>
+                <strong>Email:</strong> {userInfo.email}
               </p>
             </div>
           )}

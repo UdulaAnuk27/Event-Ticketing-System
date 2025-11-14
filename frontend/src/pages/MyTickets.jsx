@@ -7,33 +7,76 @@ const MyTickets = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    name: "N/A",
+    mobile: "N/A",
+    email: "N/A",
+  });
 
   useEffect(() => {
-    const fetchTickets = async () => {
+    const fetchTicketsAndUser = async () => {
       try {
-        const token = localStorage.getItem("token"); // JWT saved after login
-        const response = await axios.get("http://localhost:5000/api/tickets/my-tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        // 🧍 Fetch dashboard data (name & mobile)
+        const dashboardRes = await axios.get(
+          "http://localhost:5000/api/user/dashboard",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const dashboardData = dashboardRes.data.user || dashboardRes.data;
+
+        // 📧 Fetch user details (email, profile image)
+        const detailsRes = await axios.get(
+          "http://localhost:5000/api/user-details",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const detailsData = detailsRes.data.user?.details || {};
+
+        // 🧾 Combine user info
+        setUserInfo({
+          name: `${dashboardData.first_name || ""} ${
+            dashboardData.last_name || ""
+          }`.trim(),
+          mobile: dashboardData.mobile || "N/A",
+          email: detailsData.email || "N/A",
         });
-        setTickets(response.data);
+
+        // 🎟️ Fetch user bookings
+        const bookingRes = await axios.get(
+          "http://localhost:5000/api/bookings/my",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const mappedTickets = bookingRes.data.map((t) => ({
+          ...t,
+          event_title: t.event?.title || "N/A",
+          event_date: t.event?.date || "N/A",
+          event_venue: t.event?.venue || t.event?.location || "N/A",
+          booking_date: t.booking_date || t.created_at || null,
+        }));
+
+        setTickets(mappedTickets);
       } catch (error) {
-        console.error("Error fetching user tickets:", error);
-        // alert("Failed to fetch tickets");
+        console.error("Error fetching tickets or user info:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTickets();
+    fetchTicketsAndUser();
   }, []);
 
   const downloadQR = (ticket) => {
+    if (!ticket.qr_code) return;
     const link = document.createElement("a");
     link.href = ticket.qr_code;
-    link.download = `ticket_${ticket.id}.png`;
+    link.download = `ticket_${ticket.id || ticket.booking_id}.png`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const handleView = (ticket) => {
@@ -47,7 +90,7 @@ const MyTickets = () => {
   };
 
   return (
-    <div style={{ padding: "20px", minHeight: "81vh", background: "#9ecbe0ff" }}>
+    <div style={{ padding: "20px", minHeight: "80vh", background: "#9ecbe0ff" }}>
       <h3 className="mb-4 text-primary">🎟️ My Tickets</h3>
 
       {loading ? (
@@ -62,45 +105,36 @@ const MyTickets = () => {
               hover
               responsive
               className="align-middle text-center mb-0"
-              style={{ borderRadius: "12px", overflow: "hidden" }}
             >
               <thead className="bg-primary text-white">
                 <tr>
-                  <th>User</th>
+                  <th>Event</th>
+                  <th>Venue</th>
+                  <th>Tickets</th>
                   <th>Amount (Rs.)</th>
-                  <th>Original</th>
-                  <th>Discount</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                  <th>Booked On</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tickets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-4">
+                    <td colSpan={6} className="text-center py-4">
                       No tickets found
                     </td>
                   </tr>
                 ) : (
                   tickets.map((ticket) => (
-                    <tr key={ticket.id} className="align-middle">
-                      <td>{ticket.user_name || "N/A"}</td>
-                      <td>Rs. {ticket.total_price}</td>
-                      <td>Rs. {ticket.total_price}</td>
-                      <td>Rs. 0</td>
+                    <tr key={ticket.id || ticket.booking_id}>
+                      <td>{ticket.event_title}</td>
+                      <td>{ticket.event_venue}</td>
+                      <td>{ticket.tickets_count}</td>
+                      <td>{ticket.total_price}</td>
                       <td>
-                        <span
-                          className={`badge ${
-                            ticket.status === "Paid"
-                              ? "bg-success"
-                              : "bg-warning text-dark"
-                          }`}
-                        >
-                          {ticket.status || "Paid"}
-                        </span>
+                        {ticket.booking_date
+                          ? new Date(ticket.booking_date).toLocaleString()
+                          : "N/A"}
                       </td>
-                      <td>{new Date(ticket.created_at).toLocaleString()}</td>
                       <td className="d-flex justify-content-center gap-2">
                         {ticket.qr_code && (
                           <>
@@ -130,7 +164,7 @@ const MyTickets = () => {
         </Card>
       )}
 
-      {/* Modal for ticket details */}
+      {/* 🪪 Ticket Details Modal */}
       <Modal show={showModal} onHide={handleClose} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>🎫 Ticket Details</Modal.Title>
@@ -141,52 +175,70 @@ const MyTickets = () => {
               style={{
                 display: "flex",
                 gap: "30px",
-                alignItems: "center",
                 flexWrap: "wrap",
-                paddingLeft: "30px",
+                paddingLeft: "20px",
               }}
             >
-              {/* Left side: Ticket details */}
-              <div style={{ flex: "1", minWidth: "200px", textAlign: "left" }}>
+              {/* Left side */}
+              <div style={{ flex: 1, minWidth: "250px", textAlign: "left" }}>
                 <p>
-                  <strong>Event Name:</strong>{" "}
-                  {selectedTicket.event_title || "N/A"}
+                  <strong>Event:</strong> {selectedTicket.event_title}
                 </p>
                 <p>
-                  <strong>User Name:</strong>{" "}
-                  {selectedTicket.user_name || "N/A"}
+                  <strong>Event Date:</strong> {selectedTicket.event_date}
                 </p>
                 <p>
-                  <strong>Mobile:</strong> {selectedTicket.user?.mobile  || "N/A"}
+                  <strong>Venue:</strong> {selectedTicket.event_venue}
                 </p>
                 <p>
-                  <strong>Email:</strong> {selectedTicket.user_email || "N/A"}
+                  <strong>Tickets:</strong> {selectedTicket.tickets_count}
+                </p>
+                <p>
+                  <strong>Total:</strong> Rs. {selectedTicket.total_price}
+                </p>
+                <p>
+                  <strong>Booked On:</strong>{" "}
+                  {selectedTicket.booking_date
+                    ? new Date(selectedTicket.booking_date).toLocaleString()
+                    : "N/A"}
+                </p>
+                <hr />
+                <p>
+                  <strong>Name:</strong> {userInfo.name}
+                </p>
+                <p>
+                  <strong>Mobile:</strong> {userInfo.mobile}
+                </p>
+                <p>
+                  <strong>Email:</strong> {userInfo.email}
                 </p>
               </div>
 
-              {/* Right side: QR code */}
+              {/* Right: QR */}
               {selectedTicket.qr_code && (
                 <div
                   style={{
-                    flex: "1",
+                    flex: 1,
                     minWidth: "200px",
                     textAlign: "center",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
                   }}
                 >
                   <img
                     src={selectedTicket.qr_code}
                     alt="QR Code"
                     style={{
-                      width: "200px",
-                      height: "200px",
-                      objectFit: "contain",
-                      marginBottom: "10px",
+                      width: "220px",
+                      height: "220px",
+                      marginBottom: "15px",
                     }}
                   />
-                  <br />
                   <Button
                     variant="success"
                     onClick={() => downloadQR(selectedTicket)}
+                    style={{ width: "150px" }}
                   >
                     Download QR
                   </Button>

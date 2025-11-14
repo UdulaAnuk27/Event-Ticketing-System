@@ -15,15 +15,20 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/admin/login",
-        form,
-        { withCredentials: true }
-      );
+      const res = await axios.post("http://localhost:5000/api/admin/login", form, {
+        withCredentials: true,
+      });
+
+      // ✅ Save JWT token from backend
+      if (res.data?.token) {
+        localStorage.setItem("token", res.data.token);
+      }
+
       alert("✅ Admin login successful!");
-      navigate("/admin/dashboard");
+      navigate("/admin/dashboard", { replace: true });
     } catch (err) {
-      alert(err.response?.data?.message || "❌ Login failed");
+      console.error("Login error:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "❌ Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -33,8 +38,7 @@ const AdminLogin = () => {
     <div
       className="min-vh-100 d-flex align-items-center justify-content-center"
       style={{
-        background:
-          "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+        background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
         color: "white",
         fontFamily: "'Poppins', sans-serif",
       }}
@@ -54,15 +58,12 @@ const AdminLogin = () => {
           className="d-none d-md-flex flex-column justify-content-center align-items-center text-center p-5"
           style={{
             width: "50%",
-            background:
-              "linear-gradient(135deg, #576bdaea, #d3a173e0)",
+            background: "linear-gradient(135deg, #576bdaea, #d3a173e0)",
             color: "white",
           }}
         >
           <h1 className="fw-bold display-5 mb-3">Admin Portal</h1>
-          <p className="lead mb-4">
-            Manage events, users, and reports with ease.
-          </p>
+          <p className="lead mb-4">Manage events, users, and reports with ease.</p>
           <img
             src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
             alt="Admin illustration"
@@ -117,31 +118,21 @@ const AdminLogin = () => {
                 border: "none",
                 transition: "transform 0.2s ease",
               }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.transform = "scale(1.03)")
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.transform = "scale(1)")
-              }
+              onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+              onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
             >
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
 
           <p className="mt-4 text-center">
-            <Link
-              to="/user/login"
-              className="text-info text-decoration-none"
-            >
+            <Link to="/user/login" className="text-info text-decoration-none">
               User Login
             </Link>
           </p>
           <p className="text-center">
             Don’t have an account?{" "}
-            <Link
-              to="/admin/register"
-              className="text-warning text-decoration-none"
-            >
+            <Link to="/admin/register" className="text-warning text-decoration-none">
               Register as Admin
             </Link>
           </p>

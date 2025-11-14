@@ -26,6 +26,7 @@
     "nodemon": "^3.1.10",
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",
+    "soap": "^1.6.0",
     "strong-soap": "^5.0.3",
     "twilio": "^5.10.4",
     "xml2js": "^0.6.2"

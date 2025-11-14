@@ -2,29 +2,52 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Create uploads/profile_pictures folder if not exists
-const uploadDir = path.join(__dirname, "../uploads/profile_pictures");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Base upload folder
+const baseUploadDir = path.join(__dirname, "../uploads");
 
+// Ensure folder exists
+const ensureDir = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+
+// Multer storage
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
+  destination: (req, file, cb) => {
+    let folder = "others";
+
+    switch (file.fieldname) {
+      case "profile_image":          // For user profile
+        folder = "profile_pictures";
+        break;
+      case "admin_profile_image":    // For admin profile
+        folder = "admin_profile_pictures";
+        break;
+      case "event_image":            // For event uploads
+        folder = "event_images";
+        break;
+    }
+
+    const uploadPath = path.join(baseUploadDir, folder);
+    ensureDir(uploadPath);
+    cb(null, uploadPath);
   },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname); // save with original filename
+  filename: (req, file, cb) => {
+    // Use the original file name exactly as uploaded
+    cb(null, file.originalname);
   },
 });
 
+// File filter to accept only images
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed!"), false);
-  }
+  if (file.mimetype.startsWith("image/")) cb(null, true);
+  else cb(new Error("Only image files are allowed!"), false);
 };
 
-const upload = multer({ storage, fileFilter });
+// Multer instance
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+});
 
 module.exports = upload;

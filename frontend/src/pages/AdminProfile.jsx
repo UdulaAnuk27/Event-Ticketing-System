@@ -12,9 +12,9 @@ import {
 import { FaEdit, FaSave, FaTimes } from "react-icons/fa";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const Profile = () => {
-  const [user, setUser] = useState(null);
-  const [editableUser, setEditableUser] = useState(null);
+const AdminProfile = () => {
+  const [admin, setAdmin] = useState(null);
+  const [editableAdmin, setEditableAdmin] = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -23,42 +23,42 @@ const Profile = () => {
   axios.defaults.withCredentials = true;
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchAdmin = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/api/user-details", {
+        const res = await axios.get("http://localhost:5000/api/admin-details", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 
-        const u = res.data.user;
-        const userData = {
-          id: u.id,
-          first_name: u.first_name || u.details?.first_name || "",
-          last_name: u.last_name || u.details?.last_name || "",
-          mobile: u.mobile,
-          email: u.details?.email || "",
+        const a = res.data.admin;
+        const adminData = {
+          id: a.id,
+          first_name: a.first_name,
+          last_name: a.last_name,
+          mobile: a.mobile,
+          email: a.details?.email || "",
           profile_image:
-            u.details?.profile_image ||
+            a.details?.profile_image ||
             "https://cdn-icons-png.flaticon.com/512/847/847969.png",
-          date_of_birth: u.details?.date_of_birth || "",
-          address: u.details?.address || "",
+          date_of_birth: a.details?.date_of_birth || "",
+          address: a.details?.address || "",
         };
 
-        setUser(userData);
-        setEditableUser(userData);
+        setAdmin(adminData);
+        setEditableAdmin(adminData);
       } catch (err) {
-        console.error("Failed to fetch user details:", err);
+        console.error("Failed to fetch admin details:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
+    fetchAdmin();
   }, []);
 
   const handleEditClick = () => setEditing(true);
   const handleCancelClick = () => {
-    setEditableUser(user);
+    setEditableAdmin(admin);
     setSelectedImage(null);
     setEditing(false);
     setMissingFields([]);
@@ -66,7 +66,7 @@ const Profile = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditableUser({ ...editableUser, [name]: value });
+    setEditableAdmin({ ...editableAdmin, [name]: value });
     if (value.trim()) {
       setMissingFields((prev) => prev.filter((field) => field !== name));
     }
@@ -76,8 +76,8 @@ const Profile = () => {
     const file = e.target.files[0];
     if (file) {
       setSelectedImage(file);
-      setEditableUser({
-        ...editableUser,
+      setEditableAdmin({
+        ...editableAdmin,
         profile_image: URL.createObjectURL(file),
       });
     }
@@ -92,7 +92,7 @@ const Profile = () => {
       "address",
     ];
     const emptyFields = requiredFields.filter(
-      (field) => !editableUser[field]?.trim()
+      (field) => !editableAdmin[field]?.trim()
     );
     if (emptyFields.length > 0) {
       setMissingFields(emptyFields);
@@ -102,15 +102,15 @@ const Profile = () => {
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      formData.append("first_name", editableUser.first_name);
-      formData.append("last_name", editableUser.last_name);
-      formData.append("email", editableUser.email);
-      formData.append("date_of_birth", editableUser.date_of_birth);
-      formData.append("address", editableUser.address);
-      if (selectedImage) formData.append("profile_image", selectedImage);
+      formData.append("first_name", editableAdmin.first_name);
+      formData.append("last_name", editableAdmin.last_name);
+      formData.append("email", editableAdmin.email);
+      formData.append("date_of_birth", editableAdmin.date_of_birth);
+      formData.append("address", editableAdmin.address);
+      if (selectedImage) formData.append("admin_profile_image", selectedImage);
 
       const res = await axios.put(
-        "http://localhost:5000/api/user-details/update",
+        "http://localhost:5000/api/admin-details/update",
         formData,
         {
           headers: {
@@ -120,19 +120,20 @@ const Profile = () => {
         }
       );
 
-      const updatedUser = {
-        ...editableUser,
-        profile_image:
-          res.data.details?.profile_image || editableUser.profile_image,
+      const updatedAdmin = {
+        ...editableAdmin,
+        first_name: res.data.first_name || editableAdmin.first_name,
+        last_name: res.data.last_name || editableAdmin.last_name,
+        profile_image: res.data.details?.profile_image || editableAdmin.profile_image,
       };
 
-      setUser(updatedUser);
-      setEditableUser(updatedUser);
+      setAdmin(updatedAdmin);
+      setEditableAdmin(updatedAdmin);
       setEditing(false);
       setSelectedImage(null);
-      alert("Profile updated successfully!");
+      alert("Admin profile updated successfully!");
     } catch (err) {
-      console.error("Failed to update profile:", err);
+      console.error("Failed to update admin profile:", err);
       alert("Error updating profile!");
     }
   };
@@ -145,8 +146,8 @@ const Profile = () => {
       </div>
     );
 
-  if (!user)
-    return <p className="text-danger text-center mt-5">User data not found.</p>;
+  if (!admin)
+    return <p className="text-danger text-center mt-5">Admin data not found.</p>;
 
   const redOutline = {
     border: "2px solid red",
@@ -157,33 +158,24 @@ const Profile = () => {
     <div
       className="container-fluid d-flex justify-content-center align-items-center py-5"
       style={{
-        minHeight: "82vh",
-        background:
-          "#9ecbe0ff",
+        minHeight: "80vh",
+        background: "linear-gradient(135deg, #4d5e6ead 0%, #a75f0d8a 100%)",
       }}
     >
       <Card
         className="shadow-lg border-0 overflow-hidden"
-        style={{
-          width: "90%",
-          maxWidth: "1000px",
-          borderRadius: "20px",
-          background: "#ffffffcc",
-        }}
+        style={{ width: "90%", maxWidth: "1000px", borderRadius: "20px", background: "#ffffffcc" }}
       >
         <Row className="g-0">
           {/* LEFT SIDE */}
           <Col
             md={4}
             className="text-center text-white d-flex flex-column align-items-center justify-content-center p-4"
-            style={{
-              background:
-                "linear-gradient(160deg, #3639a1ff 0%, #1BFFFF 100%)",
-            }}
+            style={{ background: "linear-gradient(160deg, #3639a1ff 0%, #1BFFFF 100%)" }}
           >
             <div className="position-relative mb-3">
               <Image
-                src={editableUser.profile_image}
+                src={editableAdmin.profile_image}
                 roundedCircle
                 width="160"
                 height="160"
@@ -207,24 +199,21 @@ const Profile = () => {
               )}
             </div>
             <h4 className="fw-bold mb-0">
-              {editableUser.first_name} {editableUser.last_name}
+              {editableAdmin.first_name} {editableAdmin.last_name}
             </h4>
-            <small>{editableUser.email}</small>
+            <small>{editableAdmin.email}</small>
             <div
               className="mt-3 px-3 py-2 rounded-3"
-              style={{
-                background: "rgba(255, 255, 255, 0.2)",
-                fontSize: "0.9rem",
-              }}
+              style={{ background: "rgba(255, 255, 255, 0.2)", fontSize: "0.9rem" }}
             >
-              Mobile: {editableUser.mobile}
+              Mobile: {editableAdmin.mobile}
             </div>
           </Col>
 
           {/* RIGHT SIDE */}
           <Col md={8} className="p-5">
             <div className="d-flex justify-content-between align-items-center mb-4">
-              <h4 className="fw-bold text-primary mb-0">Profile Details</h4>
+              <h4 className="fw-bold text-primary mb-0">Admin Profile Details</h4>
               {!editing ? (
                 <Button variant="outline-primary" onClick={handleEditClick}>
                   <FaEdit className="me-1" /> Edit
@@ -249,13 +238,11 @@ const Profile = () => {
                     <Form.Control
                       type="text"
                       name="first_name"
-                      value={editableUser.first_name}
+                      value={editableAdmin.first_name}
                       onChange={handleChange}
                       readOnly={!editing}
                       placeholder="Enter first name"
-                      style={
-                        missingFields.includes("first_name") ? redOutline : {}
-                      }
+                      style={missingFields.includes("first_name") ? redOutline : {}}
                     />
                   </Form.Group>
                 </Col>
@@ -265,13 +252,11 @@ const Profile = () => {
                     <Form.Control
                       type="text"
                       name="last_name"
-                      value={editableUser.last_name}
+                      value={editableAdmin.last_name}
                       onChange={handleChange}
                       readOnly={!editing}
                       placeholder="Enter last name"
-                      style={
-                        missingFields.includes("last_name") ? redOutline : {}
-                      }
+                      style={missingFields.includes("last_name") ? redOutline : {}}
                     />
                   </Form.Group>
                 </Col>
@@ -284,7 +269,7 @@ const Profile = () => {
                     <Form.Control
                       type="email"
                       name="email"
-                      value={editableUser.email}
+                      value={editableAdmin.email}
                       onChange={handleChange}
                       readOnly={!editing}
                       placeholder="Enter email"
@@ -298,28 +283,24 @@ const Profile = () => {
                     <Form.Control
                       type="text"
                       name="mobile"
-                      value={editableUser.mobile}
+                      value={editableAdmin.mobile}
                       readOnly
                     />
                   </Form.Group>
                 </Col>
               </Row>
 
-              <Row>
+              <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label>Date of Birth</Form.Label>
                     <Form.Control
                       type="date"
                       name="date_of_birth"
-                      value={editableUser.date_of_birth}
+                      value={editableAdmin.date_of_birth}
                       onChange={handleChange}
                       readOnly={!editing}
-                      style={
-                        missingFields.includes("date_of_birth")
-                          ? redOutline
-                          : {}
-                      }
+                      style={missingFields.includes("date_of_birth") ? redOutline : {}}
                     />
                   </Form.Group>
                 </Col>
@@ -329,13 +310,11 @@ const Profile = () => {
                     <Form.Control
                       type="text"
                       name="address"
-                      value={editableUser.address}
+                      value={editableAdmin.address}
                       onChange={handleChange}
                       readOnly={!editing}
                       placeholder="Enter address"
-                      style={
-                        missingFields.includes("address") ? redOutline : {}
-                      }
+                      style={missingFields.includes("address") ? redOutline : {}}
                     />
                   </Form.Group>
                 </Col>
@@ -348,4 +327,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default AdminProfile;

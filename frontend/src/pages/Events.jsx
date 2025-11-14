@@ -1,88 +1,143 @@
-import React from "react";
-import { Card, Button, Row, Col } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { Card, Button, Row, Col, Spinner, Modal, Image } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import eventImage from "../assets/ticket.png";
-import eventImage2 from "../assets/ticket2.png";
-import eventImage3 from "../assets/ticket3.png";
-import eventImage4 from "../assets/ticket4.png";
-
+import axios from "axios";
 
 const Events = () => {
   const navigate = useNavigate();
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  const events = [
-    {
-      id: 1,
-      title: "Back to School 2025",
-      date: "2025-11-02",
-      venue: "Thurstan College, Colombo 7",
-      price: 2500,
-      image: eventImage,
-    },
-    {
-      id: 2,
-      title: "Music Fest 2025",
-      date: "2025-12-10",
-      venue: "Galle Face Green, Colombo",
-      price: 3000,
-      image: eventImage2,
-    },
-    {
-      id: 3,
-      title: "Tech Expo 2025",
-      date: "2025-10-25",
-      venue: "BMICH, Colombo",
-      price: 1500,
-      image: eventImage3,
-    },
-    {
-      id: 4,
-      title: "Art Carnival 2025",
-      date: "2025-11-15",
-      venue: "Colombo Art Gallery",
-      price: 2000,
-      image: eventImage4,
-    },
-  ];
+  const API_URL = "http://localhost:5000/api/events";
+  axios.defaults.withCredentials = true;
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.get(API_URL);
+        setEvents(res.data.events || []);
+      } catch (err) {
+        console.error("Error fetching events:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   const handleBook = (event) => {
-    // Navigate to /ticket page and pass event details via state
     navigate("/user/ticket-booking", { state: { event } });
   };
 
+  const handleViewImage = (event) => {
+    setSelectedImage(event);
+    setShowImageModal(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-5">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-3">Loading events...</p>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return <p className="text-center py-5">No upcoming events found.</p>;
+  }
+
   return (
     <div style={{ padding: "20px", minHeight: "79vh", background: "#9ecbe0ff" }}>
-      <h2 className="mb-4 text-center">🎉 Upcoming Events</h2>
-      <Row className="g-4 justify-content-center">
-        {events.map((event) => (
-          <Col key={event.id} xs={12} sm={6} md={3}>
-            <Card style={{ borderRadius: "15px", overflow: "hidden", height: "100%", boxShadow: "0 6px 20px rgba(0,0,0,0.15)" }}>
-              <Card.Img
-                variant="top"
-                src={event.image}
-                style={{ height: "220px", objectFit: "cover" }}
-              />
-              <Card.Body className="text-center d-flex flex-column justify-content-between" style={{ height: "220px" }}>
-                <div>
-                  <Card.Title className="fw-bold">{event.title}</Card.Title>
-                  <Card.Text className="mb-1">📅 {event.date}</Card.Text>
-                  <Card.Text className="mb-2">📍 {event.venue}</Card.Text>
-                </div>
-                <div>
-                  <h6 className="text-success mb-3">💰 Rs.{event.price}</h6>
-                  <Button
-                    variant="primary"
-                    className="w-100"
-                    onClick={() => handleBook(event)}
-                  >
-                    Book Now
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <div
+        style={{
+          maxWidth: "1000px",  // narrowed container
+          margin: "0 auto",    // center content
+        }}
+      >
+        <h2 className="mb-4 text-center">🎉 Upcoming Events</h2>
+        <Row className="g-4 justify-content-start">
+          {events.map((event) => (
+            <Col key={event.event_id} xs={12} sm={6} md={3}>
+              <Card
+                style={{
+                  borderRadius: "15px",
+                  overflow: "hidden",
+                  height: "100%",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+                }}
+              >
+                <Card.Img
+                  as={Image}
+                  src={event.image || "https://via.placeholder.com/300x220?text=No+Image"}
+                  alt={event.title}
+                  style={{ height: "220px", objectFit: "cover", cursor: "pointer" }}
+                  fluid
+                  rounded
+                  onClick={() => handleViewImage(event)}
+                />
+                <Card.Body
+                  className="text-center d-flex flex-column justify-content-between"
+                  style={{ height: "220px" }}
+                >
+                  <div>
+                    <Card.Title className="fw-bold">{event.title}</Card.Title>
+                    <Card.Text className="mb-1">
+                      📅 {new Date(event.date).toLocaleDateString()}
+                    </Card.Text>
+                    <Card.Text className="mb-2">📍 {event.venue}</Card.Text>
+                  </div>
+                  <div>
+                    <h6 className="text-success mb-3">
+                      💰 Rs.{parseFloat(event.price).toLocaleString()}
+                    </h6>
+                    <Button
+                      variant="primary"
+                      className="w-100"
+                      onClick={() => handleBook(event)}
+                    >
+                      Book Now
+                    </Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      {/* Image View Modal */}
+      <Modal
+        show={showImageModal}
+        onHide={() => setShowImageModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Event Image</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center">
+          {selectedImage?.image ? (
+            <Image
+              src={selectedImage.image}
+              alt={selectedImage.title}
+              fluid
+              rounded
+              style={{ maxHeight: "300px" }}
+            />
+          ) : (
+            <p className="text-muted">No image available.</p>
+          )}
+          <h5 className="mt-3">{selectedImage?.title}</h5>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowImageModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

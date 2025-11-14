@@ -6,7 +6,6 @@ import {
   FaIdBadge,
   FaClock,
   FaUserAlt,
-  FaTicketAlt,
 } from "react-icons/fa";
 
 const UserDashboard = () => {
@@ -51,16 +50,29 @@ const UserDashboard = () => {
     fetchUserData();
   }, []);
 
-  // Fetch tickets
+  // Fetch bookings from updated endpoint
   useEffect(() => {
     const fetchTickets = async () => {
       setTicketsLoading(true);
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:5000/api/tickets/my-tickets", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        setTickets(response.data || []);
+        const response = await axios.get(
+          "http://localhost:5000/api/bookings/my",
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+
+        // Map tickets for consistent structure
+        const mappedTickets = response.data.map((t) => ({
+          id: t.id || t.booking_id,
+          event_title: t.event?.title || "Unnamed Event",
+          venue: t.event?.venue || t.event?.location || "Location not specified",
+          created_at: t.booking_date || t.created_at || null,
+          status: t.status || "Paid",
+          tickets_count: t.tickets_count || 1,
+          total_price: t.total_price || 0,
+        }));
+
+        setTickets(mappedTickets);
       } catch (error) {
         console.error("Error fetching tickets:", error);
       } finally {
@@ -198,13 +210,13 @@ const UserDashboard = () => {
               <div key={ticket.id} className="ticket-card fade-in">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <h5 className="fw-bold mb-1">{ticket.event_title || "Unnamed Event"}</h5>
-                    <small className="text-muted">
-                      {ticket.venue || "Location not specified"}
-                    </small>
+                    <h5 className="fw-bold mb-1">{ticket.event_title}</h5>
+                    <small className="text-muted">{ticket.venue}</small>
                     <br />
                     <small className="text-muted">
-                      {new Date(ticket.created_at).toLocaleString()}
+                      {ticket.created_at
+                        ? new Date(ticket.created_at).toLocaleString()
+                        : "N/A"}
                     </small>
                   </div>
                   <div className="text-end">
@@ -217,7 +229,7 @@ const UserDashboard = () => {
                           : "bg-secondary"
                       }`}
                     >
-                      {ticket.status || "Paid"}
+                      {ticket.status}
                     </span>
                     <br />
                     <button

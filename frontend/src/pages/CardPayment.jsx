@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, Form, Button } from "react-bootstrap";
 import { FaCcVisa, FaCcMastercard } from "react-icons/fa";
 import axios from "axios";
 
-const Payment = () => {
-  const { state } = useLocation(); // event + user info
+const CardPayment = () => {
+  const { state } = useLocation(); // event + tickets + user + total
   const navigate = useNavigate();
+
+  const { event, tickets, total } = state || {};
+  const [user, setUser] = useState(state?.user || null);
+  const [loading, setLoading] = useState(true);
 
   const [cardType, setCardType] = useState("Visa");
   const [cardDetails, setCardDetails] = useState({
@@ -16,16 +20,56 @@ const Payment = () => {
     cvv: "",
   });
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        // Fetch dashboard data (name & mobile)
+        const dashboardRes = await axios.get(
+          "http://localhost:5000/api/user/dashboard",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const dashboardData = dashboardRes.data.user || dashboardRes.data;
+
+        // Fetch user details (email, profile image)
+        const detailsRes = await axios.get(
+          "http://localhost:5000/api/user-details",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const detailsData = detailsRes.data.user || detailsRes.data;
+
+        const email = detailsData?.details?.email || "N/A";
+        const profile_image =
+          detailsData?.details?.profile_image ||
+          "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+
+        setUser({
+          first_name: dashboardData.first_name,
+          last_name: dashboardData.last_name,
+          mobile: dashboardData.mobile,
+          email,
+          profile_image,
+        });
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (!user) fetchUserData();
+  }, [user]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "cardNumber") {
       let num = value.replace(/\D/g, "").slice(0, 16);
       num = num.replace(/(\d{4})(?=\d)/g, "$1 ");
       setCardDetails({ ...cardDetails, cardNumber: num });
     } else if (name === "cvv") {
-      const cvv = value.replace(/\D/g, "").slice(0, 3);
-      setCardDetails({ ...cardDetails, cvv });
+      setCardDetails({ ...cardDetails, cvv: value.replace(/\D/g, "").slice(0, 3) });
     } else if (name === "expiry") {
       let exp = value.replace(/\D/g, "").slice(0, 4);
       if (exp.length > 2) exp = exp.slice(0, 2) + "/" + exp.slice(2);
@@ -38,12 +82,12 @@ const Payment = () => {
   const handlePayment = async (e) => {
     e.preventDefault();
 
-    if (
-      !cardDetails.cardNumber ||
-      !cardDetails.cardName ||
-      !cardDetails.expiry ||
-      !cardDetails.cvv
-    ) {
+    if (!event || !user) {
+      alert("⚠️ Missing event or user data!");
+      return;
+    }
+
+    if (!cardDetails.cardNumber || !cardDetails.cardName || !cardDetails.expiry || !cardDetails.cvv) {
       alert("⚠️ Please fill in all card details!");
       return;
     }
@@ -51,46 +95,38 @@ const Payment = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("⚠️ Please log in to continue payment!");
+        alert("⚠️ Please login first!");
         navigate("/user/login");
         return;
       }
 
-      const paymentData = {
-        event_title: state.title,
-        event_date: state.date,
-        venue: state.venue,
-        tickets_count: state.tickets,
-        total_price: state.total,
+      const bookingData = {
+        event_id: event.event_id,
+        tickets_count: tickets,
         card_type: cardType,
         card_last4: cardDetails.cardNumber.slice(-4),
       };
 
-      const res = await axios.post(
-        "http://localhost:5000/api/tickets/book",
-        paymentData,
-        {
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
+      const res = await axios.post("http://localhost:5000/api/bookings/ticket", bookingData, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
 
-      if (res.status === 201 && res.data.ticket) {
-        alert("✅ Payment Successful!");
+      if (res.status === 201) {
         navigate("/user/ticket-success", {
-          state: { ticket: res.data.ticket, user: res.data.user },
+          state: { ticket: res.data.booking, user },
         });
       } else {
-        alert(res.data.message || "❌ Payment failed. Please try again.");
+        alert(res.data.message || "Payment failed");
       }
-    } catch (error) {
-      console.error("Payment Error:", error);
-      alert(
-        error.response?.data?.message ||
-          "❌ Payment failed due to server error. Please try again later."
-      );
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert(err.response?.data?.message || "Server error");
     }
   };
+
+  if (loading) {
+    return <div className="text-center py-5">Loading user info...</div>;
+  }
 
   return (
     <div
@@ -113,7 +149,7 @@ const Payment = () => {
           padding: "20px",
         }}
       >
-        {/* LEFT: Ticket + User Details */}
+        {/* LEFT: Event + User Details */}
         <div
           style={{
             flex: 1,
@@ -127,22 +163,21 @@ const Payment = () => {
             border: "1px solid #e0e0e0",
           }}
         >
-          <h5 className="fw-bold text-primary mb-1">{state.title}</h5>
-          <p className="mb-1">📅 {state.date}</p>
-          <p className="mb-1">📍 {state.venue}</p>
-          <p className="mb-1">🎟️ Tickets: {state.tickets}</p>
-          <h6 className="text-success fw-bold mb-2">💰 Rs.{state.total}</h6>
+          <h5 className="fw-bold text-primary mb-1">{event?.title}</h5>
+          <p className="mb-1">📅 {event?.date}</p>
+          <p className="mb-1">📍 {event?.venue}</p>
+          <p className="mb-1">🎟️ Tickets: {tickets}</p>
+          <h6 className="text-success fw-bold mb-2">💰 Rs.{total}</h6>
           <hr />
           <h6 className="fw-bold mb-1">👤 User Details</h6>
-          <p className="mb-1">Name: {state.user?.name || "John Doe"}</p>
-          <p className="mb-1">Mobile: {state.user?.mobile || "+94 712345678"}</p>
-          <p className="mb-0">Email: {state.user?.email || "example@email.com"}</p>
+          <p className="mb-1">Name: {user?.first_name} {user?.last_name}</p>
+          <p className="mb-1">Mobile: {user?.mobile}</p>
+          <p className="mb-0">Email: {user?.email}</p>
         </div>
 
         {/* RIGHT: Payment Form */}
         <Card.Body style={{ flex: 1, padding: "20px" }}>
           <h5 className="text-center mb-3 text-primary">💳 Payment Details</h5>
-
           <Form onSubmit={handlePayment}>
             <Form.Group className="mb-2">
               <Form.Label>Card Type</Form.Label>
@@ -150,11 +185,7 @@ const Payment = () => {
                 <Form.Check
                   type="radio"
                   id="visa"
-                  label={
-                    <>
-                      <FaCcVisa size={22} color="#1a1f71" /> Visa
-                    </>
-                  }
+                  label={<><FaCcVisa /> Visa</>}
                   name="cardType"
                   checked={cardType === "Visa"}
                   onChange={() => setCardType("Visa")}
@@ -162,11 +193,7 @@ const Payment = () => {
                 <Form.Check
                   type="radio"
                   id="mastercard"
-                  label={
-                    <>
-                      <FaCcMastercard size={22} color="#eb001b" /> MasterCard
-                    </>
-                  }
+                  label={<><FaCcMastercard /> MasterCard</>}
                   name="cardType"
                   checked={cardType === "MasterCard"}
                   onChange={() => setCardType("MasterCard")}
@@ -180,9 +207,9 @@ const Payment = () => {
                 type="text"
                 name="cardNumber"
                 placeholder="xxxx xxxx xxxx xxxx"
-                required
                 value={cardDetails.cardNumber}
                 onChange={handleChange}
+                required
               />
             </Form.Group>
 
@@ -192,9 +219,9 @@ const Payment = () => {
                 type="text"
                 name="cardName"
                 placeholder="John Doe"
-                required
                 value={cardDetails.cardName}
                 onChange={handleChange}
+                required
               />
             </Form.Group>
 
@@ -205,28 +232,26 @@ const Payment = () => {
                   type="text"
                   name="expiry"
                   placeholder="MM/YY"
-                  required
                   value={cardDetails.expiry}
                   onChange={handleChange}
+                  required
                 />
               </Form.Group>
-
               <Form.Group className="flex-fill">
                 <Form.Label>CVV</Form.Label>
                 <Form.Control
                   type="password"
                   name="cvv"
                   placeholder="•••"
-                  required
                   value={cardDetails.cvv}
                   onChange={handleChange}
+                  required
                 />
               </Form.Group>
             </div>
 
             <Button
               type="submit"
-              variant="success"
               className="w-100 py-2 fw-semibold"
               style={{
                 background: "linear-gradient(90deg, #38ef7d 0%, #11998e 100%)",
@@ -243,4 +268,4 @@ const Payment = () => {
   );
 };
 
-export default Payment;
+export default CardPayment;

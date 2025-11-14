@@ -13,10 +13,18 @@ import Payments from "./pages/Payments";
 import TicketSuccess from "./pages/TicketSuccess";
 import MyTickets from "./pages/MyTickets";
 import MyQRCodes from "./pages/MyQRCodes";
-import Profile from "./pages/Profile";
+import Profile from "./pages/Profile"; 
+import Settings from "./pages/Settings";
 
 import AdminLayout from "./pages/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
+import Users from "./pages/Users";
+import AddUser from "./pages/AddUser";
+import ManageEvents from "./pages/ManageEvents";
+import Tickets from "./pages/Tickets";
+import AdminProfile from "./pages/AdminProfile";
+import AdminSettings from "./pages/AdminSettings";
+
 
 function App() {
   return (
@@ -38,13 +46,19 @@ function App() {
         <Route path="payments" element={<Payments />} />
         <Route path="my-qr-codes" element={<MyQRCodes />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/*Admin routes with layout */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="users" element={<Users />} /> 
+        <Route path="add-user" element={<AddUser />} />
+        <Route path="manage-events" element={<ManageEvents />} />
+        <Route path="tickets" element={<Tickets />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
-
     </Routes>
   );
 }

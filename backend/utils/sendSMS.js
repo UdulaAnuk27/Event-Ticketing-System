@@ -1,72 +1,29 @@
-const axios = require("axios");
-const xml2js = require("xml2js");
+// backend/utils/sendSMS.js
+const { createSession, sendMessages, closeSession } = require("../sms");
 
-const sendSMS = async (recipient, message) => {
-  const username = process.env.MOBITEL_USERNAME;
-  const password = process.env.MOBITEL_PASSWORD;
-  const customer = process.env.MOBITEL_CUSTOMER || "QATest";
-  const sender = process.env.MOBITEL_SENDER || "QATest";
-  const apiUrl = process.env.MOBITEL_API_URL;
-
-  console.log("📡 MOBITEL ENV:", { username, password, apiUrl });
-
-  if (!username || !password || !apiUrl) {
-    throw new Error("Missing Mobitel SMS credentials");
-  }
-
-  // ✅ Format recipient to 94XXXXXXXXX
-  let mobile = recipient;
-  if (mobile.startsWith("0")) mobile = "94" + mobile.slice(1);
-  else if (!mobile.startsWith("94")) mobile = "94" + mobile;
-
-  // 🧩 Correct SOAP XML request body (Mobitel Enterprise Format)
-  const soapBody = `
-    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                      xmlns:esms="http://www.mobitel.lk/esms/">
-      <soapenv:Header/>
-      <soapenv:Body>
-        <esms:sendMessages>
-          <esms:username>${username}</esms:username>
-          <esms:password>${password}</esms:password>
-          <esms:customer>${customer}</esms:customer>
-          <esms:from>${sender}</esms:from>
-          <esms:messageData>
-            <esms:message>
-              <esms:recipient>${mobile}</esms:recipient>
-              <esms:messageText>${message}</esms:messageText>
-            </esms:message>
-          </esms:messageData>
-        </esms:sendMessages>
-      </soapenv:Body>
-    </soapenv:Envelope>
-  `;
-
+async function sendSMS(mobile, message) {
   try {
-    const { data } = await axios.post(apiUrl, soapBody, {
-      headers: {
-        "Content-Type": "text/xml;charset=UTF-8",
-        SOAPAction: "urn:sendMessages",
-      },
-      timeout: 15000,
-    });
+    const username = process.env.MOBITEL_USERNAME;
+    const password = process.env.MOBITEL_PASSWORD;
+    const alias = process.env.MOBITEL_ALIAS || "NITFB";
 
-    // Parse SOAP XML response
-    const parsed = await xml2js.parseStringPromise(data, { explicitArray: false });
-    const result =
-      parsed?.["soapenv:Envelope"]?.["soapenv:Body"]?.["ns1:sendMessagesResponse"]?.return ||
-      parsed?.["Envelope"]?.["Body"]?.["sendMessagesResponse"]?.return;
+    const session = await createSession(username, password);
+    const recipients = [mobile.replace("+94", "0")]; // 07XXXXXXXX format
+    const response = await sendMessages(session, alias, message, recipients, 0);
 
-    if (result && result.toLowerCase().includes("ok")) {
-      console.log(`✅ SMS sent successfully to ${recipient}`);
+    await closeSession(session);
+
+    if (response) {
+      console.log("✅ SMS sent to", mobile);
       return true;
     } else {
-      console.error("❌ SMS failed:", result || data);
-      throw new Error("SMS sending failed");
+      console.warn("⚠️ SMS failed to send to", mobile);
+      return false;
     }
   } catch (err) {
-    console.error("❌ Failed to send SMS:", err.message);
-    throw new Error("Failed to send SMS");
+    console.error("⚠️ SMS error:", err.message);
+    return false;
   }
-};
+}
 
 module.exports = sendSMS;
